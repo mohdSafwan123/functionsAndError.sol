@@ -1,0 +1,67 @@
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.6.12 <0.9.0;
+
+contract LoanSystem {
+
+  address public creditor;
+ 
+  uint public creditorBalance = 1000; // Simulated creditor balance in wei
+  uint[] public debtorBalances = [200, 0]; // Simulated debtor balances in wei
+  uint public transactionFee = 10; // Simulated transaction fee in wei
+  
+  bool[] public isDebtorOnCooldown = [false, false];
+  
+  modifier onlyCreditor {
+    require(creditor == msg.sender, "Only the creditor can access this function");
+    _;
+  }
+
+  constructor() {
+    creditor = msg.sender;
+  }
+
+  function getCreditorBalance() public view onlyCreditor returns(uint) {
+    return creditorBalance;
+  }
+
+  function getDebtorBalance(uint _debtorId) public view onlyCreditor returns(uint) {
+    require(_debtorId == 0 || _debtorId == 1, "Invalid debtor ID");
+    return debtorBalances[_debtorId];
+  }
+
+  function sendLoan(uint _loanAmount, uint _debtorId) public payable onlyCreditor {
+    assert(transactionFee == 10);
+    require(_debtorId == 0 || _debtorId == 1, "Invalid debtor ID");
+    require(!isDebtorOnCooldown[_debtorId], "Debtor on transaction cooldown cannot receive any loans");
+
+    isDebtorOnCooldown[_debtorId] = true;
+    
+    require(creditorBalance >= _loanAmount, "Creditor balance is insufficient to continue with this transaction");
+    require(debtorBalances[_debtorId] >= transactionFee, "Debtor balance is insufficient to continue with this transaction");
+
+    creditorBalance -= _loanAmount;
+    debtorBalances[_debtorId] += _loanAmount - transactionFee;
+  }
+
+  function debtorCooldownStatus(uint _debtorId) public view onlyCreditor returns(bool) {
+    require(_debtorId == 0 || _debtorId == 1, "Invalid debtor ID");
+    return isDebtorOnCooldown[_debtorId];
+  }
+
+  function resetDebtorCooldown(uint _debtorId) public onlyCreditor {
+    require(_debtorId == 0 || _debtorId == 1, "Invalid debtor ID");
+    isDebtorOnCooldown[_debtorId] = false;
+  }
+
+  function updateTransactionFee() public onlyCreditor {
+    transactionFee++;
+  }
+
+  function viewTransactionFee() public view onlyCreditor returns(uint) {
+    return transactionFee;
+  }
+  
+  function resetTransactionFee() public onlyCreditor {
+    transactionFee = 10;
+  }
+}
